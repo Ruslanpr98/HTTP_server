@@ -1,0 +1,3 @@
+/home/ruslan/Desktop/C++/Projects/HTTP_server/codecrafters-http-server-cpp/CMakeFiles/server.dir
+/home/ruslan/Desktop/C++/Projects/HTTP_server/codecrafters-http-server-cpp/CMakeFiles/edit_cache.dir
+/home/ruslan/Desktop/C++/Projects/HTTP_server/codecrafters-http-server-cpp/CMakeFiles/rebuild_cache.dir
