@@ -11,6 +11,19 @@
 
 #define BUFFER_SIZE 256
 
+std::string find_http_path (const std::string& buf) {
+  int begin_path = buf.find(' ');
+
+  int end_path = buf.find(' ', begin_path+1);
+
+  std::cout << begin_path << " " << end_path << std::endl;
+
+  std::string path_message = buf.substr(begin_path+1, end_path-4);
+
+  return path_message;
+
+}
+
 int main(int argc, char **argv) {
   // You can use print statements as follows for debugging, they'll be visible when running tests.
   std::cout << "Logs from your program will appear here!\n";
@@ -51,6 +64,9 @@ int main(int argc, char **argv) {
   int client_addr_len = sizeof(client_addr);
   
   std::cout << "Waiting for a client to connect...\n";
+
+
+
   
   int client = accept(server_fd, (struct sockaddr *) &client_addr, (socklen_t *) &client_addr_len);
   if (client < 0) {
@@ -59,53 +75,59 @@ int main(int argc, char **argv) {
   }
   std::cout << "Client connected\n";
 
-  char buffer[BUFFER_SIZE];
+  std::string buffer;
+  buffer.resize(256, '\0');
+
   ssize_t bytesRead;
 
-  bytesRead = read(client, buffer, BUFFER_SIZE - 1);
+  bytesRead = recv(client, (void*) &buffer[0], buffer.max_size(), 0);
   if (bytesRead < 0) {
       std::cerr << "Error reading from socket" << std::endl;
       return -1;
   }
 
+
   std::string headers(buffer);
+
+  std::string path_string = find_http_path(headers);
 
   //std::cout << headers << std::endl;
 
-  int begin_path = headers.find("echo") + 5;
-
-  int end_path = headers.find(' ', begin_path);
-
-  std::string path_string = headers.substr(begin_path, end_path - begin_path);
 
 
-  std::cout << path_string << std::endl;
+  //std::cout << path_string << std::endl;
 
-  std::string content_type = "Content-Type: text/plain\r\n\r\n";
-  std::string content_length = "Content-Length: 3\r\n\r\n";
-
+  std::string content_type = "Content-Type: text/plain\r\n";
+  std::string content_length = "Content-Length: ";
   
   
   std::string response_message;
-  if (headers.find("/echo") != std::string::npos) {
+
+  if (path_string == "/") {
     response_message = "HTTP/1.1 200 OK\r\n\r\n";
-    response_message = response_message + content_type + content_length + path_string;
+    //response_message = response_message + content_type + content_length;
+  }
+  else if (path_string.find("/echo/") != std::string::npos) {
+    std::string path_message = path_string.substr(path_string.find('/', 1) + 1);
+    response_message = "HTTP/1.1 200 OK\r\n" + content_type + content_length + std::to_string(path_message.size()) + "\r\n" + "\r\n" + path_message;
+  }
+  else if (path_string.find("/user-agent") != std::string::npos) {
+    std::cout << path_string << std::endl;
+    ssize_t user_agent_begin = headers.find("User-Agent: ");
+    ssize_t user_agent_end = headers.find("\r\n", user_agent_begin);
+    std::string user_agent_header = headers.substr(user_agent_begin+strlen("User-Agent: "), user_agent_end-user_agent_begin-strlen("User-Agent: "));
     
+    response_message = "HTTP/1.1 200 OK\r\n" + content_type + content_length + std::to_string(user_agent_header.size()) + "\r\n" + "\r\n" + user_agent_header;
+
   }
-  else if (path_string == "/") {
-    response_message = "HTTP/1.1 200 OK\r\n\r\n";
-    response_message = response_message + content_type + content_length;
-  }
+  
   else {
     response_message = "HTTP/1.1 404 Not Found\r\n\r\n";
-    response_message = response_message + content_type + content_length;
-  }
-
-  
+    //response_message = response_message + content_type + content_length;
+  }  
   
   std::cout << response_message << std::endl;
 
-  
 
   int response = send(client, response_message.c_str(), response_message.length(), 0);
     if (response < 0) {
